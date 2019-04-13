@@ -11,15 +11,18 @@ public class Starter {
 
         Options options = new Options();
 
-        Option remoteNodeOpt = new Option("n", "remoteNode", true, "list of node ip addresses separated by comma");
+        Option remoteNodeOpt = new Option("n", "remoteNode", true,
+                "list of node ip addresses separated by comma");
         remoteNodeOpt.setRequired(false);
         options.addOption(remoteNodeOpt);
 
-        Option remotyePortOpt = new Option("p", "port", true, "default port is 9002. If you want to override the port use the -p option");
+        Option remotyePortOpt = new Option("p", "port", true,
+                "default port is 9002. If you want to override the port use the -p option");
         remotyePortOpt.setRequired(false);
         options.addOption(remotyePortOpt);
 
-        Option listenPortOpt = new Option("l", "listen", true, "by default listen on port 9002. If you want to override the listen port use the -l option");
+        Option listenPortOpt = new Option("l", "listen", true,
+                "by default listen on port 9002. If you want to override the listen port use the -l option");
         listenPortOpt.setRequired(false);
         options.addOption(listenPortOpt);
 
@@ -51,9 +54,12 @@ public class Starter {
             listenPort = Integer.parseInt(listenPortStr);
         }
 
-        System.out.println("Remote Node: "+ remoteNode);
-        System.out.println("Remote port: "+ remotePort);
-        System.out.println("Listen port: "+ listenPort);
+
+        System.out.println("Localserver: 127.0.0.1 port:"+ listenPort);
+        if( remoteNode != null ){
+            System.out.println("RemoteHost: "+ remoteNode + ", port: "+ remotePort);
+        }
+
 
 
         // By Default, Start the server
@@ -61,10 +67,8 @@ public class Starter {
         server.start(listenPort);
 
         // if a remote host ip address is provided, connect to that address
-        if( remoteNode != null ){
-            GossipClient client = new GossipClient( remoteNode, remotePort);
-            client.start();
-        }
+        GossipClient client = new GossipClient( remoteNode, remotePort);
+        client.start();
 
         server.waitForCompletion();
     }

@@ -14,7 +14,7 @@ import java.net.Inet4Address;
 
 public class SecureServerHandler extends SimpleChannelInboundHandler<String> {
 
-    static final ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    static final ChannelGroup incomingChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
@@ -35,7 +35,7 @@ public class SecureServerHandler extends SimpleChannelInboundHandler<String> {
                         ctx.writeAndFlush("Welcome to "+ Inet4Address.getLocalHost().getHostName() + " secure stream\n");
                         ctx.writeAndFlush("Your session is protected by "+ ctx.pipeline().get(SslHandler.class).engine().getSession().getCipherSuite() + "\n");
 
-                        channels.add(ctx.channel());
+                        incomingChannels.add(ctx.channel());
                     }
 
                 });
@@ -51,9 +51,9 @@ public class SecureServerHandler extends SimpleChannelInboundHandler<String> {
             return;
         }
 
-        for( Channel channel : channels){
+        for( Channel channel : incomingChannels){
             if( ctx.channel() != channel ){
-                // send the message to other channels
+                // send the message to other incomingChannels
                 channel.writeAndFlush("["+ ctx.channel().remoteAddress() + "] " + msg + '\n' );
             }else{
                 channel.writeAndFlush("[you] "+ msg + '\n');

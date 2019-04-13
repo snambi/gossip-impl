@@ -15,7 +15,7 @@ import java.security.cert.CertificateException;
 
 public class GossipServer {
 
-    static final int PORT = Integer.parseInt(System.getProperty("port", "8992"));
+    public static final int PORT = Integer.parseInt(System.getProperty("port", "9002"));
 
     private Thread runner;
 
