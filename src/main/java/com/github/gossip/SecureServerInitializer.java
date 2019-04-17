@@ -11,9 +11,11 @@ import io.netty.handler.ssl.SslContext;
 public class SecureServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final SslContext sslCtx;
+    private String serverName;
 
-    public SecureServerInitializer(SslContext ctx) {
+    public SecureServerInitializer(SslContext ctx, String serverName) {
         this.sslCtx = ctx;
+        this.serverName = serverName;
     }
 
     @Override
@@ -34,7 +36,7 @@ public class SecureServerInitializer extends ChannelInitializer<SocketChannel> {
         pipeline.addLast(new StringEncoder());
 
         // finally the stream handler
-        pipeline.addLast(new SecureServerHandler());
+        pipeline.addLast(new SecureServerHandler(getServerName()));
 
         ChannelFuture closeFuture = socketChannel.closeFuture();
         closeFuture.addListener(new ChannelFutureListener() {
@@ -49,5 +51,9 @@ public class SecureServerInitializer extends ChannelInitializer<SocketChannel> {
     public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
         super.channelUnregistered(ctx);
         System.err.println("Channel unregistered: "+ ctx.channel().remoteAddress());
+    }
+
+    public String getServerName() {
+        return serverName;
     }
 }

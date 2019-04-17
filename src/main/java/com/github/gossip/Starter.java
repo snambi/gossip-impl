@@ -4,27 +4,22 @@ import org.apache.commons.cli.*;
 
 public class Starter {
 
-    public static final int REMOTE_PORT = 9002;
-    public static final int LISTEN_PORT = 9002;
+    public static final int PORT = 9002;
+    private String name;
 
     public static void main( String[] args ){
 
         Options options = new Options();
 
         Option remoteNodeOpt = new Option("n", "remoteNode", true,
-                "list of node ip addresses separated by comma");
+                "list of node ip addresses:port numbers separated by comma");
         remoteNodeOpt.setRequired(false);
         options.addOption(remoteNodeOpt);
 
-        Option remotyePortOpt = new Option("p", "port", true,
+        Option portOpt = new Option("p", "port", true,
                 "default port is 9002. If you want to override the port use the -p option");
-        remotyePortOpt.setRequired(false);
-        options.addOption(remotyePortOpt);
-
-        Option listenPortOpt = new Option("l", "listen", true,
-                "by default listen on port 9002. If you want to override the listen port use the -l option");
-        listenPortOpt.setRequired(false);
-        options.addOption(listenPortOpt);
+        portOpt.setRequired(false);
+        options.addOption(portOpt);
 
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -35,39 +30,35 @@ public class Starter {
         } catch (ParseException e) {
             System.out.println(e.getMessage());
             formatter.printHelp("remoteNode", options);
-
             System.exit(1);
         }
 
         String remoteNodeStr = cmd.getOptionValue("remoteNode");
-        String remotePortStr = cmd.getOptionValue("port");
-        String listenPortStr = cmd.getOptionValue("listen");
+        String portStr = cmd.getOptionValue("port");
+
 
         String remoteNode = remoteNodeStr;
-        int remotePort = REMOTE_PORT;
-        int listenPort = LISTEN_PORT;
+        int port = PORT;
 
-        if( remotePortStr != null && !remotePortStr.isEmpty() ){
-            remotePort = Integer.parseInt(remotePortStr);
-        }
-        if( listenPortStr != null && !listenPortStr.isEmpty()) {
-            listenPort = Integer.parseInt(listenPortStr);
+        if( portStr != null && !portStr.isEmpty() ){
+            port = Integer.parseInt(portStr);
         }
 
 
-        System.out.println("Localserver: 127.0.0.1 port:"+ listenPort);
+        System.out.println("Localserver: 127.0.0.1 port:"+ port);
         if( remoteNode != null ){
-            System.out.println("RemoteHost: "+ remoteNode + ", port: "+ remotePort);
+            System.out.println("RemoteHost: "+ remoteNode );
         }
 
-
+        // Generate a name for the "node"
+        String nodeName = RandomString.generateString(5);
 
         // By Default, Start the server
         GossipServer server = new GossipServer();
-        server.start(listenPort);
+        server.start(port);
 
         // if a remote host ip address is provided, connect to that address
-        GossipClient client = new GossipClient( remoteNode, remotePort);
+        GossipClient client = new GossipClient(nodeName, port, remoteNode);
         client.start();
 
         server.waitForCompletion();

@@ -14,8 +14,11 @@ import javax.net.ssl.SSLException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
-import static com.github.gossip.GossipServer.PORT;
+import static com.github.gossip.Starter.PORT;
+
 
 /**
  * Gossip Client is responsible for
@@ -28,31 +31,63 @@ import static com.github.gossip.GossipServer.PORT;
  */
 public class GossipClient {
 
-    public static final String HOST = System.getProperty("host", "127.0.0.1");
+    public static final String LOCAL_HOST = System.getProperty("host", "127.0.0.1");
 
+    private int localPort;
+    List<RemoteNode> nodes = null;
 
-    private int remotePort = 9002;
-    private String remoteHost = null;
     private Channel localChannel = null;
     private EventLoopGroup localLoopGroup = null;
+    private NioEventLoopGroup remoteLoopGroup = null;
 
-    public GossipClient(String remoteHost, int remotePort) {
-        this.remotePort = remotePort;
-        this.remoteHost = remoteHost;
+    private List<Channel> outgoingChannels = new ArrayList<Channel>();
+    private String name;
+
+    /**
+     * Connects only to local host, on a given port.
+     * If the port is passed as 0, it connects on the default port.
+     * @param localPort
+     */
+    public GossipClient( int localPort){
+        this( RandomString.generateString(5), localPort, null);
+    }
+
+    public GossipClient( String nodeName, int localPort, String remoteHosts ){
+
+        if( localPort == 0 ){
+            localPort = Starter.PORT;
+        }
+
+        this.localPort = localPort;
+        this.name = nodeName;
+
+        if( remoteHosts != null ) {
+            nodes = RemoteNode.parseMultiHosts(remoteHosts);
+        }
+    }
+
+    /**
+     * Connects to localhost and remote hosts
+     * @param remoteHosts
+     * @param localPort
+     */
+    public GossipClient(String remoteHosts, int localPort ) {
+        nodes = RemoteNode.parseMultiHosts(remoteHosts);
+        this.localPort = localPort;
     }
 
     public static void main(String[] args ){
-
-        GossipClient client = new GossipClient( HOST, PORT);
+        GossipClient client = new GossipClient(LOCAL_HOST, PORT );
         client.start();
     }
 
 
     public void start(){
-        startLocalChannel();
-        startCli();
 
-        // start remote channels
+        startLocalChannel();
+        startRemoteChannels();
+
+        startCli();
     }
 
     public void startCli(){
@@ -67,6 +102,7 @@ public class GossipClient {
                 line = in.readLine();
 
                 sendLocal(line);
+                sendRemote(line);
 
                 if (line == null) {
                     break;
@@ -82,6 +118,43 @@ public class GossipClient {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    public void startRemoteChannels(){
+
+        if( nodes == null || nodes.isEmpty() ){
+            return;
+        }
+
+        try{
+
+            SslContext sslContext = SslContextBuilder.forClient()
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                    .build();
+
+            remoteLoopGroup = new NioEventLoopGroup();
+
+            for( RemoteNode node : nodes ) {
+
+                Bootstrap bootstrap = new Bootstrap();
+
+                bootstrap.group(remoteLoopGroup)
+                        .channel(NioSocketChannel.class)
+                        .handler(new SecureClientInitializer(sslContext));
+
+                System.out.println("Remote connection to " + node.getHost() + ":" + node.getPort());
+                Channel remoteChannel = bootstrap.connect( node.getHost(), node.getPort()).sync().channel();
+
+                // add the remote channels to the list for future reference
+                outgoingChannels.add(remoteChannel);
+            }
+
+        }catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (SSLException e) {
+            e.printStackTrace();
+        } finally{
         }
     }
 
@@ -106,8 +179,8 @@ public class GossipClient {
                     .channel(NioSocketChannel.class)
                     .handler( new SecureClientInitializer( sslContext ));
 
-            System.out.println("Connecting to "+ HOST+ ":" + PORT );
-            localChannel = bootstrap.connect( HOST, PORT ).sync().channel();
+            System.out.println("Local connection to "+ LOCAL_HOST + ":" + localPort );
+            localChannel = bootstrap.connect(LOCAL_HOST, localPort ).sync().channel();
 
         } catch (SSLException e) {
             e.printStackTrace();
@@ -129,16 +202,30 @@ public class GossipClient {
         }
     }
 
+    public void sendRemote( String msg ) throws InterruptedException {
+
+
+        for( Channel channel : outgoingChannels){
+
+            if( channel == localChannel){
+                continue;
+            }
+
+            System.out.println("Sending remote message to [ "+ channel.remoteAddress() + "]"+ msg);
+
+            ChannelFuture channelFuture = channel.writeAndFlush(msg + "\r\n");
+
+            if( channelFuture != null ){
+                channelFuture.sync();
+            }
+
+            if( msg.toLowerCase().equals("bye")){
+                channel.closeFuture().sync();
+            }
+        }
+    }
+
     public void shutdownLocal(){
         localLoopGroup.shutdownGracefully();
-    }
-
-
-    public int getRemotePort() {
-        return remotePort;
-    }
-
-    public String getRemoteHost() {
-        return remoteHost;
     }
 }

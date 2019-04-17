@@ -18,12 +18,19 @@ public class GossipServer {
     public static final int PORT = Integer.parseInt(System.getProperty("port", "9002"));
 
     private Thread runner;
+    private String name;
 
     public static void main( String[] args ){
-
         GossipServer server = new GossipServer();
         server.startListening(PORT);
+    }
 
+    public GossipServer(){
+        this(RandomString.generateString(5));
+    }
+
+    public GossipServer( String nodeName ){
+        this.name = nodeName;
     }
 
     public void startListening(int port ){
@@ -41,9 +48,9 @@ public class GossipServer {
             bootstrap.group(boosGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .handler( new LoggingHandler(LogLevel.DEBUG))
-                    .childHandler(new SecureServerInitializer(sslContext));
+                    .childHandler(new SecureServerInitializer(sslContext, getName()));
 
-            System.out.println("Listening for connections on "+ port);
+            System.out.println("Listening for connections on "+ port + " server_name: "+ getName());
 
             bootstrap.bind( port )
                     .sync()
@@ -70,6 +77,10 @@ public class GossipServer {
 
         runner = new Thread(r);
         runner.start();
+    }
+
+    public String getName() {
+        return name;
     }
 
     public void waitForCompletion(){

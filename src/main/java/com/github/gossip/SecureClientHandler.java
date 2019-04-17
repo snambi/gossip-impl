@@ -6,7 +6,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 public class SecureClientHandler extends SimpleChannelInboundHandler<String> {
 
     protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
-        System.out.println(msg);
+        System.out.println("> " + msg);
     }
 
     @Override

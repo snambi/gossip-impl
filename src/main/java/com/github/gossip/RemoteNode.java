@@ -3,6 +3,8 @@ package com.github.gossip;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.github.gossip.Starter.PORT;
+
 public class RemoteNode {
 
     private String host;
@@ -26,6 +28,8 @@ public class RemoteNode {
                     int port = Integer.parseInt( arr[1] );
                     node = new RemoteNode(arr[0], port);
                 }
+            }else{
+                node = new RemoteNode(remoteNodeStr, PORT );
             }
         }
 
@@ -52,5 +56,13 @@ public class RemoteNode {
         }
 
         return nodes;
+    }
+
+    public String getHost() {
+        return host;
+    }
+
+    public int getPort() {
+        return port;
     }
 }

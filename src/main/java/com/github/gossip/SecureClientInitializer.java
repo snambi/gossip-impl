@@ -21,12 +21,13 @@ public class SecureClientInitializer extends ChannelInitializer<SocketChannel> {
 
         ChannelPipeline pipeline = channel.pipeline();
 
-        pipeline.addLast(sslContext.newHandler(channel.alloc(), GossipClient.HOST, GossipServer.PORT ));
+        pipeline.addLast(sslContext.newHandler(channel.alloc(), GossipClient.LOCAL_HOST, GossipServer.PORT ));
 
         pipeline.addLast(new DelimiterBasedFrameDecoder(8192, Delimiters.lineDelimiter()));
         pipeline.addLast(new StringDecoder());
         pipeline.addLast(new StringEncoder());
 
+        // Handler that processes that incoming events
         pipeline.addLast(new SecureClientHandler());
     }
 
