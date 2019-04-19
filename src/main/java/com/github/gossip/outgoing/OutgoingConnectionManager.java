@@ -1,5 +1,6 @@
-package com.github.gossip;
+package com.github.gossip.outgoing;
 
+import com.github.gossip.*;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -21,15 +22,18 @@ import static com.github.gossip.Starter.PORT;
 
 
 /**
+ *
+ * Manages all incoming connections.
+ *
  * Gossip Client is responsible for
  *
  * <ul>
- *     <li>Connecting to other nodes that are passed via CLI parameters. These are outgoing connections</li>
+ *     <li>Connecting to other nodes that are passed via CLI parameters. These are incoming connections</li>
  *     <li>Also Connects to the default listener running on this process</li>
  *     <li>Constantly reads the STDIN and sends the message to the local listener</li>
  * </ul>
  */
-public class GossipClient {
+public class OutgoingConnectionManager {
 
     public static final String LOCAL_HOST = System.getProperty("host", "127.0.0.1");
 
@@ -41,25 +45,27 @@ public class GossipClient {
     private NioEventLoopGroup remoteLoopGroup = null;
 
     private List<Channel> outgoingChannels = new ArrayList<Channel>();
-    private String name;
+    //private ChannelGroup outgoing = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+
+    private String nodeName;
 
     /**
      * Connects only to local host, on a given port.
      * If the port is passed as 0, it connects on the default port.
      * @param localPort
      */
-    public GossipClient( int localPort){
+    public OutgoingConnectionManager(int localPort){
         this( RandomString.generateString(5), localPort, null);
     }
 
-    public GossipClient( String nodeName, int localPort, String remoteHosts ){
+    public OutgoingConnectionManager(String nodeName, int localPort, String remoteHosts ){
 
         if( localPort == 0 ){
             localPort = Starter.PORT;
         }
 
         this.localPort = localPort;
-        this.name = nodeName;
+        this.nodeName = nodeName;
 
         if( remoteHosts != null ) {
             nodes = RemoteNode.parseMultiHosts(remoteHosts);
@@ -71,23 +77,35 @@ public class GossipClient {
      * @param remoteHosts
      * @param localPort
      */
-    public GossipClient(String remoteHosts, int localPort ) {
+    public OutgoingConnectionManager(String remoteHosts, int localPort ) {
         nodes = RemoteNode.parseMultiHosts(remoteHosts);
         this.localPort = localPort;
     }
 
     public static void main(String[] args ){
-        GossipClient client = new GossipClient(LOCAL_HOST, PORT );
+        OutgoingConnectionManager client = new OutgoingConnectionManager(LOCAL_HOST, PORT );
         client.start();
     }
 
 
     public void start(){
-
         startLocalChannel();
         startRemoteChannels();
+        //sendFirstMessage();
 
         startCli();
+    }
+
+    public void sendFirstMessage(){
+
+        Message message = Message.create(nodeName, "First message from "+ nodeName);
+        MessageWrapper wrapper = new MessageWrapper(message.toJson());
+
+        try {
+            sendLocal(wrapper.toJson());
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     public void startCli(){
@@ -101,8 +119,11 @@ public class GossipClient {
             try {
                 line = in.readLine();
 
-                sendLocal(line);
-                sendRemote(line);
+                Message message = Message.create(nodeName, line);
+                MessageWrapper wrapper = new MessageWrapper(message.toJson());
+
+                sendLocal( wrapper.toJson() );
+                //broadcast( wrapper.toJson() );
 
                 if (line == null) {
                     break;
@@ -141,13 +162,15 @@ public class GossipClient {
 
                 bootstrap.group(remoteLoopGroup)
                         .channel(NioSocketChannel.class)
-                        .handler(new SecureClientInitializer(sslContext));
+                        .handler(new SecureClientInitializer(sslContext, this)); // TODO: avoid circular dependencies
 
                 System.out.println("Remote connection to " + node.getHost() + ":" + node.getPort());
                 Channel remoteChannel = bootstrap.connect( node.getHost(), node.getPort()).sync().channel();
 
                 // add the remote channels to the list for future reference
                 outgoingChannels.add(remoteChannel);
+
+                //outgoing.add(remoteChannel);
             }
 
         }catch (InterruptedException e) {
@@ -177,7 +200,7 @@ public class GossipClient {
 
             bootstrap.group(localLoopGroup)
                     .channel(NioSocketChannel.class)
-                    .handler( new SecureClientInitializer( sslContext ));
+                    .handler( new SecureClientInitializer( sslContext, null ));
 
             System.out.println("Local connection to "+ LOCAL_HOST + ":" + localPort );
             localChannel = bootstrap.connect(LOCAL_HOST, localPort ).sync().channel();
@@ -202,16 +225,16 @@ public class GossipClient {
         }
     }
 
-    public void sendRemote( String msg ) throws InterruptedException {
-
+    public void broadcast(String msg ) throws InterruptedException {
 
         for( Channel channel : outgoingChannels){
+        //for(Channel channel: outgoing){
 
             if( channel == localChannel){
                 continue;
             }
 
-            System.out.println("Sending remote message to [ "+ channel.remoteAddress() + "]"+ msg);
+            //System.out.println("Sending remote message to [ "+ channel.remoteAddress() + "]"+ msg);
 
             ChannelFuture channelFuture = channel.writeAndFlush(msg + "\r\n");
 
@@ -221,6 +244,17 @@ public class GossipClient {
 
             if( msg.toLowerCase().equals("bye")){
                 channel.closeFuture().sync();
+            }
+        }
+    }
+
+    public void broadcast(MessageWrapper wrapper){
+        if( wrapper != null ){
+            try {
+                broadcast(wrapper.toJson());
+
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }

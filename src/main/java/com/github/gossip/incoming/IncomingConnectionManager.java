@@ -1,7 +1,14 @@
-package com.github.gossip;
+package com.github.gossip.incoming;
 
+import com.github.gossip.Message;
+import com.github.gossip.MessageWrapper;
+import com.github.gossip.RandomString;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
@@ -9,28 +16,34 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.concurrent.GlobalEventExecutor;
 
 import javax.net.ssl.SSLException;
 import java.security.cert.CertificateException;
 
-public class GossipServer {
+/**
+ * Manages all outgoing connections.
+ *
+ */
+public class IncomingConnectionManager {
 
     public static final int PORT = Integer.parseInt(System.getProperty("port", "9002"));
+    ChannelGroup incomingChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
     private Thread runner;
-    private String name;
+    private String nodeName;
 
     public static void main( String[] args ){
-        GossipServer server = new GossipServer();
+        IncomingConnectionManager server = new IncomingConnectionManager();
         server.startListening(PORT);
     }
 
-    public GossipServer(){
+    public IncomingConnectionManager(){
         this(RandomString.generateString(5));
     }
 
-    public GossipServer( String nodeName ){
-        this.name = nodeName;
+    public IncomingConnectionManager(String nodeName ){
+        this.nodeName = nodeName;
     }
 
     public void startListening(int port ){
@@ -48,9 +61,9 @@ public class GossipServer {
             bootstrap.group(boosGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .handler( new LoggingHandler(LogLevel.DEBUG))
-                    .childHandler(new SecureServerInitializer(sslContext, getName()));
+                    .childHandler(new SecureServerInitializer(sslContext, this)); // TODO: avoid circular dependencies
 
-            System.out.println("Listening for connections on "+ port + " server_name: "+ getName());
+            System.out.println("Listening for connections on "+ port + " server_name: "+ getNodeName());
 
             bootstrap.bind( port )
                     .sync()
@@ -79,8 +92,32 @@ public class GossipServer {
         runner.start();
     }
 
-    public String getName() {
-        return name;
+    public void broadcast( ChannelHandlerContext handlerContext, MessageWrapper messageWrapper ){
+
+        for( Channel channel : getIncomingChannels()){
+
+            if( handlerContext.channel() != channel ){
+
+                Message message = messageWrapper.getMessage();
+                //System.out.println("RECD >> "+ message.getContent());
+                channel.writeAndFlush( messageWrapper.toJson() + '\n' );
+
+
+            }else{
+                // This is the channel, on which the message came.
+                // So, don't write anything back
+                // TODO: we may need a way to acknowledge the receipt of the message
+                //channel.writeAndFlush("[you] "+ msg + '\n');
+            }
+        }
+    }
+
+    public String getNodeName() {
+        return nodeName;
+    }
+
+    public ChannelGroup getIncomingChannels() {
+        return incomingChannels;
     }
 
     public void waitForCompletion(){

@@ -1,11 +1,16 @@
 package com.github.gossip;
 
+import com.github.gossip.incoming.IncomingConnectionManager;
+import com.github.gossip.outgoing.OutgoingConnectionManager;
 import org.apache.commons.cli.*;
 
 public class Starter {
 
     public static final int PORT = 9002;
     private String name;
+
+    // TODO: this is similar to singleton pattern. Refactor this to a better approach.
+    private static MessageRouter messageRouter;
 
     public static void main( String[] args ){
 
@@ -54,13 +59,22 @@ public class Starter {
         String nodeName = RandomString.generateString(5);
 
         // By Default, Start the server
-        GossipServer server = new GossipServer();
-        server.start(port);
+        IncomingConnectionManager incoming = new IncomingConnectionManager(nodeName);
+
 
         // if a remote host ip address is provided, connect to that address
-        GossipClient client = new GossipClient(nodeName, port, remoteNode);
-        client.start();
+        OutgoingConnectionManager outgoing = new OutgoingConnectionManager(nodeName, port, remoteNode);
 
-        server.waitForCompletion();
+
+        messageRouter = new MessageRouter(incoming, outgoing);
+
+        incoming.start(port);
+        outgoing.start();
+
+        incoming.waitForCompletion();
+    }
+
+    public static MessageRouter getMessageRouter(){
+        return messageRouter;
     }
 }

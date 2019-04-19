@@ -1,4 +1,4 @@
-package com.github.gossip;
+package com.github.gossip.incoming;
 
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
@@ -11,11 +11,11 @@ import io.netty.handler.ssl.SslContext;
 public class SecureServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final SslContext sslCtx;
-    private String serverName;
+    private IncomingConnectionManager incomingConnectionManager;
 
-    public SecureServerInitializer(SslContext ctx, String serverName) {
+    public SecureServerInitializer(SslContext ctx, IncomingConnectionManager connectionManager) {
         this.sslCtx = ctx;
-        this.serverName = serverName;
+        this.incomingConnectionManager = connectionManager;
     }
 
     @Override
@@ -36,7 +36,7 @@ public class SecureServerInitializer extends ChannelInitializer<SocketChannel> {
         pipeline.addLast(new StringEncoder());
 
         // finally the stream handler
-        pipeline.addLast(new SecureServerHandler(getServerName()));
+        pipeline.addLast(new SecureServerHandler(incomingConnectionManager)); // TODO: avoid circular dependencies
 
         ChannelFuture closeFuture = socketChannel.closeFuture();
         closeFuture.addListener(new ChannelFutureListener() {
@@ -53,7 +53,7 @@ public class SecureServerInitializer extends ChannelInitializer<SocketChannel> {
         System.err.println("Channel unregistered: "+ ctx.channel().remoteAddress());
     }
 
-    public String getServerName() {
-        return serverName;
+    public String getNodeName() {
+        return incomingConnectionManager.getNodeName();
     }
 }

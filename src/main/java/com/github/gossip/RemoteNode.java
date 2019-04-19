@@ -7,15 +7,22 @@ import static com.github.gossip.Starter.PORT;
 
 public class RemoteNode {
 
+    private String name;
     private String host;
     private int port;
+
+    public RemoteNode(String name, String host, int port) {
+        this.name = name;
+        this.host = host;
+        this.port = port;
+    }
 
     public RemoteNode(String host, int port) {
         this.host = host;
         this.port = port;
     }
 
-    public static RemoteNode parseStr( String remoteNodeStr ){
+    public static RemoteNode parseStr(String remoteNodeStr ){
 
         RemoteNode node = null;
 
@@ -64,5 +71,13 @@ public class RemoteNode {
 
     public int getPort() {
         return port;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 }
