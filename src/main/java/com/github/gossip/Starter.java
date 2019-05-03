@@ -16,7 +16,7 @@ public class Starter {
 
         Options options = new Options();
 
-        Option remoteNodeOpt = new Option("n", "remoteNode", true,
+        Option remoteNodeOpt = new Option("n", "remoteNodes", true,
                 "list of node ip addresses:port numbers separated by comma");
         remoteNodeOpt.setRequired(false);
         options.addOption(remoteNodeOpt);
@@ -38,11 +38,11 @@ public class Starter {
             System.exit(1);
         }
 
-        String remoteNodeStr = cmd.getOptionValue("remoteNode");
+        String remoteNodesStr = cmd.getOptionValue("remoteNodes");
         String portStr = cmd.getOptionValue("port");
 
 
-        String remoteNode = remoteNodeStr;
+        String remoteNodes = remoteNodesStr;
         int port = PORT;
 
         if( portStr != null && !portStr.isEmpty() ){
@@ -51,8 +51,8 @@ public class Starter {
 
 
         System.out.println("Localserver: 127.0.0.1 port:"+ port);
-        if( remoteNode != null ){
-            System.out.println("RemoteHost: "+ remoteNode );
+        if( remoteNodes != null ){
+            System.out.println("RemoteHost: "+ remoteNodes );
         }
 
         // Generate a name for the "node"
@@ -63,7 +63,7 @@ public class Starter {
 
 
         // if a remote host ip address is provided, connect to that address
-        OutgoingConnectionManager outgoing = new OutgoingConnectionManager(nodeName, port, remoteNode);
+        OutgoingConnectionManager outgoing = new OutgoingConnectionManager(nodeName, port, remoteNodes);
 
 
         messageRouter = new MessageRouter(incoming, outgoing);

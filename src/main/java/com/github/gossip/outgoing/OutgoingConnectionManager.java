@@ -38,10 +38,10 @@ public class OutgoingConnectionManager {
     public static final String LOCAL_HOST = System.getProperty("host", "127.0.0.1");
 
     private int localPort;
-    List<RemoteNode> nodes = null;
+    List<RemoteNode> nodes = new ArrayList<>();
 
     private Channel localChannel = null;
-    private EventLoopGroup localLoopGroup = null;
+    private NioEventLoopGroup localLoopGroup = null;
     private NioEventLoopGroup remoteLoopGroup = null;
 
     private List<Channel> outgoingChannels = new ArrayList<Channel>();
@@ -67,8 +67,13 @@ public class OutgoingConnectionManager {
         this.localPort = localPort;
         this.nodeName = nodeName;
 
+        // add the local connection
+        RemoteNode localNode = new RemoteNode("127.0.0.1", localPort);
+
+        nodes.add(localNode);
+
         if( remoteHosts != null ) {
-            nodes = RemoteNode.parseMultiHosts(remoteHosts);
+            nodes.addAll(RemoteNode.parseMultiHosts(remoteHosts));
         }
     }
 
@@ -89,7 +94,7 @@ public class OutgoingConnectionManager {
 
 
     public void start(){
-        startLocalChannel();
+        //startLocalChannel();
         startRemoteChannels();
         //sendFirstMessage();
 
@@ -122,8 +127,8 @@ public class OutgoingConnectionManager {
                 Message message = Message.create(nodeName, line);
                 MessageWrapper wrapper = new MessageWrapper(message.toJson());
 
-                sendLocal( wrapper.toJson() );
-                //broadcast( wrapper.toJson() );
+                //sendLocal( wrapper.toJson() );
+                broadcast( wrapper.toJson() );
 
                 if (line == null) {
                     break;
@@ -154,7 +159,7 @@ public class OutgoingConnectionManager {
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .build();
 
-            remoteLoopGroup = new NioEventLoopGroup();
+            remoteLoopGroup = new NioEventLoopGroup(10);
 
             for( RemoteNode node : nodes ) {
 
@@ -184,11 +189,12 @@ public class OutgoingConnectionManager {
     /**
      * Connects the local listening socket to send messages.
      */
+    @Deprecated
     public void startLocalChannel(){
 
         final SslContext sslContext;
 
-        localLoopGroup = new NioEventLoopGroup(1);
+        localLoopGroup = new NioEventLoopGroup();
 
         try {
 
@@ -212,6 +218,7 @@ public class OutgoingConnectionManager {
         }
     }
 
+    @Deprecated
     public void sendLocal( String msg ) throws InterruptedException {
 
         ChannelFuture lastWriteFuture = localChannel.writeAndFlush(msg + "\r\n");
@@ -234,9 +241,9 @@ public class OutgoingConnectionManager {
                 continue;
             }
 
-            //System.out.println("Sending remote message to [ "+ channel.remoteAddress() + "]"+ msg);
+            System.out.println("Sending remote message to [ "+ channel.remoteAddress() + "]"+ msg);
 
-            ChannelFuture channelFuture = channel.writeAndFlush(msg + "\r\n");
+            ChannelFuture channelFuture = channel.writeAndFlush(msg + '\n');
 
             if( channelFuture != null ){
                 channelFuture.sync();

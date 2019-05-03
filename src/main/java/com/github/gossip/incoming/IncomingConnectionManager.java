@@ -53,12 +53,12 @@ public class IncomingConnectionManager {
             SelfSignedCertificate cert = new SelfSignedCertificate();
             SslContext sslContext = SslContextBuilder.forServer( cert.certificate(), cert.privateKey()).build();
 
-            EventLoopGroup boosGroup = new NioEventLoopGroup(1);
+            EventLoopGroup bossGroup = new NioEventLoopGroup();
             EventLoopGroup workerGroup = new NioEventLoopGroup();
 
             ServerBootstrap bootstrap = new ServerBootstrap();
 
-            bootstrap.group(boosGroup, workerGroup)
+            bootstrap.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .handler( new LoggingHandler(LogLevel.DEBUG))
                     .childHandler(new SecureServerInitializer(sslContext, this)); // TODO: avoid circular dependencies

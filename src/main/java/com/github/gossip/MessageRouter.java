@@ -2,7 +2,6 @@ package com.github.gossip;
 
 import com.github.gossip.incoming.IncomingConnectionManager;
 import com.github.gossip.outgoing.OutgoingConnectionManager;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 
 public class MessageRouter {
@@ -15,6 +14,7 @@ public class MessageRouter {
 
     public MessageRouter(IncomingConnectionManager incomingConnectionManager,
                          OutgoingConnectionManager outgoingConnectionManager) {
+
         this.incomingConnectionManager = incomingConnectionManager;
         this.outgoingConnectionManager = outgoingConnectionManager;
 
@@ -30,7 +30,7 @@ public class MessageRouter {
      *     <li>add the message to received messages list</li>
      * </ol>
     */
-    public void process(ChannelHandlerContext handlerContext, MessageWrapper messageWrapper){
+    public synchronized void process(ChannelHandlerContext handlerContext, MessageWrapper messageWrapper){
 
         if( messageWrapper == null ){
             return;
@@ -39,20 +39,41 @@ public class MessageRouter {
         if( storage.containsMessage(messageWrapper.getMessage())){
             return;
         }
+        storage.add(messageWrapper.getMessage());
 
-        System.out.println(">"+ messageWrapper.getMessage().getContent());
+        System.out.println( messageWrapper.getMessage().getId() + ":>"+ messageWrapper.getMessage().getContent());
         broadcast(handlerContext, messageWrapper);
 
-        storage.add(messageWrapper.getMessage());
+        //System.out.print("<<");
     }
+
 
     /**
      * Sends the message to all incoming and outgoing channels
      * @param messageWrapper
      */
-    public void broadcast( ChannelHandlerContext handlerContext, MessageWrapper messageWrapper ){
+    public void broadcast(ChannelHandlerContext handlerContext, MessageWrapper messageWrapper ){
 
-        incomingConnectionManager.broadcast(handlerContext, messageWrapper);
-        outgoingConnectionManager.broadcast(messageWrapper);
+        Runnable r = new Runnable() {
+            @Override
+            public void run() {
+                incomingConnectionManager.broadcast(handlerContext, messageWrapper);
+                System.out.println("Broadcast on incoming");
+            }
+        };
+
+        Thread t1 = new Thread(r);
+        t1.start();
+
+        Runnable s = new Runnable() {
+            @Override
+            public void run() {
+                outgoingConnectionManager.broadcast(messageWrapper);
+                System.out.println("Broadcast on outgoing");
+            }
+        };
+
+        Thread t2 = new Thread(s);
+        t2.start();
     }
 }

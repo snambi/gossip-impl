@@ -70,28 +70,6 @@ public class SecureServerHandler extends SimpleChannelInboundHandler<String> {
         // TODO: properly pass this object via constructor.
         MessageRouter messageRouter = Starter.getMessageRouter();
         messageRouter.process(ctx, wrapper);
-
-//        for( Channel channel : incomingConnectionManager.getIncomingChannels()){
-//            if( ctx.channel() != channel ){
-//
-//                // send the message to other incomingChannels
-//
-//                Message message = wrapper.getMessage();
-//
-//                //System.out.println("recd>>"+ msg);
-//                System.out.println("RECD >> "+ message.getContent());
-//
-//                channel.writeAndFlush(msg + '\n' );
-//
-//
-//            }else{
-//                // This is the channel, on which the message came.
-//                // So, don't write anything back
-//                // TODO: we may need a way to acknowledge the receipt of the message
-//                //channel.writeAndFlush("[you] "+ msg + '\n');
-//            }
-//        }
-
     }
 
     @Override
