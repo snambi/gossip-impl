@@ -18,7 +18,7 @@ public class SecureClientHandler extends SimpleChannelInboundHandler<String> {
 
         MessageWrapper wrapper = MessageWrapper.fromJson(msg);
 
-        System.out.println(">> "+ wrapper.getMessage().getContent() );
+
 
         // TODO: properly pass this object via constructor.
         MessageRouter messageRouter = Starter.getMessageRouter();

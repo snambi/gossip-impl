@@ -38,18 +38,21 @@ public class SecureServerHandler extends SimpleChannelInboundHandler<String> {
 
                     public void operationComplete(Future<? super Channel> future) throws Exception {
 
-                        //System.out.println("Received connection from : "+ ctx.channel().remoteAddress());
+                        System.out.println("Received connection from : "+ ctx.channel().remoteAddress());
 
-                        String msg = String.format("Welcome to %s secure stream. The connection is protected by %s.",
-                                incomingConnectionManager.getNodeName(),
-                                ctx.pipeline().get(SslHandler.class).engine().getSession().getCipherSuite());
+                        if( Starter.isDebug() ) {
+                            System.out.println("Sending to : " + ctx.channel().remoteAddress());
+                        }
 
-                        Message m = Message.create(incomingConnectionManager.getNodeName(), msg );
-                        MessageWrapper wrapper = new MessageWrapper(m.toJson());
+                        // Send a welcome message back to the client
+//                        String msg = String.format("Welcome to %s secure stream. The connection is protected by %s.",
+//                                incomingConnectionManager.getNodeName(),
+//                                ctx.pipeline().get(SslHandler.class).engine().getSession().getCipherSuite());
 
-                        //System.out.println( "Sending to : "+ ctx.channel().remoteAddress());
-
-                        ctx.writeAndFlush( wrapper.toJson() + "\n");
+//                        Message m = Message.create(incomingConnectionManager.getNodeName(), msg );
+//                        MessageWrapper wrapper = new MessageWrapper(m.toJson());
+//
+//                        ctx.writeAndFlush( wrapper.toJson() + "\n");
 
                         incomingConnectionManager.getIncomingChannels().add(ctx.channel());
                     }

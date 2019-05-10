@@ -37,14 +37,16 @@ public class MessageRouter {
         }
 
         if( storage.containsMessage(messageWrapper.getMessage())){
+            if( Starter.isDebug())
+                System.out.println("message found: " + messageWrapper.getMessage().getContent());
+
             return;
         }
         storage.add(messageWrapper.getMessage());
 
-        System.out.println( messageWrapper.getMessage().getId() + ":>"+ messageWrapper.getMessage().getContent());
-        broadcast(handlerContext, messageWrapper);
+        System.out.println(">>> "+ messageWrapper.getMessage().getContent() );
 
-        //System.out.print("<<");
+        broadcast(handlerContext, messageWrapper);
     }
 
 
@@ -54,11 +56,15 @@ public class MessageRouter {
      */
     public void broadcast(ChannelHandlerContext handlerContext, MessageWrapper messageWrapper ){
 
+
+        // TODO: use a threadpool
         Runnable r = new Runnable() {
             @Override
             public void run() {
                 incomingConnectionManager.broadcast(handlerContext, messageWrapper);
-                System.out.println("Broadcast on incoming");
+                if( Starter.isDebug()){
+                    System.out.println("Broadcast on incoming");
+                }
             }
         };
 
@@ -69,7 +75,9 @@ public class MessageRouter {
             @Override
             public void run() {
                 outgoingConnectionManager.broadcast(messageWrapper);
-                System.out.println("Broadcast on outgoing");
+                if( Starter.isDebug()) {
+                    System.out.println("Broadcast on outgoing");
+                }
             }
         };
 

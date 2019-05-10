@@ -27,6 +27,8 @@ import java.security.cert.CertificateException;
  */
 public class IncomingConnectionManager {
 
+    //private static final Logger logger = LoggerFactory.getLogger(IncomingConnectionManager.class);
+
     public static final int PORT = Integer.parseInt(System.getProperty("port", "9002"));
     ChannelGroup incomingChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
@@ -71,11 +73,7 @@ public class IncomingConnectionManager {
                     .closeFuture()
                     .sync();
 
-        } catch (CertificateException e) {
-            e.printStackTrace();
-        } catch (SSLException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
+        } catch (CertificateException | SSLException | InterruptedException e) {
             e.printStackTrace();
         }
     }
@@ -112,11 +110,11 @@ public class IncomingConnectionManager {
         }
     }
 
-    public String getNodeName() {
+    String getNodeName() {
         return nodeName;
     }
 
-    public ChannelGroup getIncomingChannels() {
+    ChannelGroup getIncomingChannels() {
         return incomingChannels;
     }
 

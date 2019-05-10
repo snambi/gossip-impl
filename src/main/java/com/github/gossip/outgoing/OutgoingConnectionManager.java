@@ -35,6 +35,8 @@ import static com.github.gossip.Starter.PORT;
  */
 public class OutgoingConnectionManager {
 
+    //private static final Logger logger = LoggerFactory.getLogger(OutgoingConnectionManager.class);
+
     public static final String LOCAL_HOST = System.getProperty("host", "127.0.0.1");
 
     private int localPort;
@@ -94,24 +96,11 @@ public class OutgoingConnectionManager {
 
 
     public void start(){
-        //startLocalChannel();
-        startRemoteChannels();
-        //sendFirstMessage();
 
+        startRemoteChannels();
         startCli();
     }
 
-    public void sendFirstMessage(){
-
-        Message message = Message.create(nodeName, "First message from "+ nodeName);
-        MessageWrapper wrapper = new MessageWrapper(message.toJson());
-
-        try {
-            sendLocal(wrapper.toJson());
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
 
     public void startCli(){
 
@@ -134,18 +123,12 @@ public class OutgoingConnectionManager {
                     break;
                 }
 
-//                if( line.toLowerCase().equals("bye")){
-//                    in.close();
-//                    break;
-//                }
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
+            } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
             }
         }
     }
+
 
     public void startRemoteChannels(){
 
@@ -170,6 +153,7 @@ public class OutgoingConnectionManager {
                         .handler(new SecureClientInitializer(sslContext, this)); // TODO: avoid circular dependencies
 
                 System.out.println("Remote connection to " + node.getHost() + ":" + node.getPort());
+
                 Channel remoteChannel = bootstrap.connect( node.getHost(), node.getPort()).sync().channel();
 
                 // add the remote channels to the list for future reference
@@ -178,9 +162,7 @@ public class OutgoingConnectionManager {
                 //outgoing.add(remoteChannel);
             }
 
-        }catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (SSLException e) {
+        }catch (InterruptedException | SSLException e) {
             e.printStackTrace();
         } finally{
         }
@@ -209,11 +191,10 @@ public class OutgoingConnectionManager {
                     .handler( new SecureClientInitializer( sslContext, null ));
 
             System.out.println("Local connection to "+ LOCAL_HOST + ":" + localPort );
+
             localChannel = bootstrap.connect(LOCAL_HOST, localPort ).sync().channel();
 
-        } catch (SSLException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
+        } catch (SSLException | InterruptedException e) {
             e.printStackTrace();
         }
     }
@@ -241,7 +222,9 @@ public class OutgoingConnectionManager {
                 continue;
             }
 
-            System.out.println("Sending remote message to [ "+ channel.remoteAddress() + "]"+ msg);
+            if( Starter.isDebug() ){
+                System.out.println("Sending remote message to [ "+ channel.remoteAddress() + "]"+ msg);
+            }
 
             ChannelFuture channelFuture = channel.writeAndFlush(msg + '\n');
 
